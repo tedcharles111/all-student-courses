@@ -1,70 +1,53 @@
 const db = require('../db');
 
-function listCourses({ page = 1, limit = 20, search, subject, level, sort = 'title' }) {
-  const offset = (page - 1) * limit;
-  let whereClause = [];
-  let params = {};
+function listCourses({ page = 1, limit = 20, search, starts_with, subject, level, sort = 'title' }) {
+  let courses = db.getCourses();
 
   if (search) {
-    whereClause.push(`(c.title LIKE @search OR c.subject LIKE @search)`);
-    params.search = `%${search}%`;
+    const s = search.toLowerCase();
+    courses = courses.filter(c => c.title.toLowerCase().includes(s) || c.subject.toLowerCase().includes(s));
+  }
+  if (starts_with) {
+    const letter = starts_with.toLowerCase();
+    courses = courses.filter(c => c.title.toLowerCase().startsWith(letter));
   }
   if (subject) {
-    whereClause.push(`c.subject = @subject`);
-    params.subject = subject;
+    courses = courses.filter(c => c.subject === subject);
   }
   if (level) {
-    whereClause.push(`c.level = @level`);
-    params.level = level;
+    courses = courses.filter(c => c.level === level);
   }
 
-  const whereSQL = whereClause.length > 0 ? `WHERE ${whereClause.join(' AND ')}` : '';
+  courses.sort((a, b) => {
+    if (sort === 'title') return a.title.localeCompare(b.title);
+    if (sort === 'subject') return a.subject.localeCompare(b.subject);
+    if (sort === 'level') return a.level.localeCompare(b.level);
+    return 0;
+  });
 
-  // Count total matching
-  const countRow = db.prepare(`SELECT COUNT(*) as total FROM courses c ${whereSQL}`).get(params);
-  const total = countRow.total;
-
-  // Fetch page
-  const allowedSorts = { title: 'c.title', subject: 'c.subject', level: 'c.level' };
-  const orderBy = allowedSorts[sort] || 'c.title';
-
-  const rows = db.prepare(`
-    SELECT c.id, c.title, c.subject, c.level, c.description, 
-           c.language, c.total_lessons
-    FROM courses c
-    ${whereSQL}
-    ORDER BY ${orderBy}
-    LIMIT @limit OFFSET @offset
-  `).all({ ...params, limit, offset });
+  const total = courses.length;
+  const totalPages = Math.ceil(total / limit);
+  const start = (page - 1) * limit;
+  const paged = courses.slice(start, start + limit);
 
   return {
     page,
     limit,
     total,
-    totalPages: Math.ceil(total / limit),
-    courses: rows
+    totalPages,
+    courses: paged.map(c => ({ ...c, lessons: undefined }))
   };
 }
 
 function getCourseById(id) {
-  const course = db.prepare(`SELECT * FROM courses WHERE id = ?`).get(id);
+  const course = db.getCourses().find(c => c.id == id);
   if (!course) return null;
-
-  const lessons = db.prepare(`
-    SELECT id, order_index, title, content, resource_url, resource_type
-    FROM lessons
-    WHERE course_id = ?
-    ORDER BY order_index
-  `).all(id);
-
+  const lessons = db.getLessons().filter(l => l.course_id == id).sort((a, b) => a.order_index - b.order_index);
   return { ...course, lessons };
 }
 
 function getLessonById(courseId, lessonId) {
-  const lesson = db.prepare(`
-    SELECT * FROM lessons WHERE id = ? AND course_id = ?
-  `).get(lessonId, courseId);
-  return lesson;
+  return db.getLessons().find(l => l.id == lessonId && l.course_id == courseId) || null;
 }
 
 module.exports = { listCourses, getCourseById, getLessonById };

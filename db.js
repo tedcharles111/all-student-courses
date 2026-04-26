@@ -1,39 +1,39 @@
-const Database = require('better-sqlite3');
+const fs = require('fs');
 const path = require('path');
 
-const dbPath = path.join(__dirname, 'courses.db');
-const db = new Database(dbPath);
+const DATA_FILE = path.join(__dirname, 'data.json');
 
-// Enable WAL mode for better concurrency
-db.pragma('journal_mode = WAL');
+let data = { courses: [], lessons: [] };
 
-// Create tables if they don't exist
-db.exec(`
-  CREATE TABLE IF NOT EXISTS courses (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    subject TEXT NOT NULL,
-    level TEXT NOT NULL CHECK(level IN ('primary','secondary','tertiary')),
-    description TEXT,
-    language TEXT DEFAULT 'en',
-    total_lessons INTEGER DEFAULT 0
-  );
+try {
+  if (fs.existsSync(DATA_FILE)) {
+    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+    data = JSON.parse(raw);
+  }
+} catch (e) {
+  console.error('Error loading data.json, starting fresh', e.message);
+}
 
-  CREATE TABLE IF NOT EXISTS lessons (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    course_id INTEGER NOT NULL,
-    order_index INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,           -- Full lesson notes / HTML content
-    resource_url TEXT,              -- Optional link to a file (PDF, image, etc.)
-    resource_type TEXT,             -- e.g., 'pdf','video','image','zip'
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
-  );
+function save() {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
 
-  CREATE INDEX IF NOT EXISTS idx_lessons_course ON lessons(course_id);
-  CREATE INDEX IF NOT EXISTS idx_courses_subject ON courses(subject);
-  CREATE INDEX IF NOT EXISTS idx_courses_level ON courses(level);
-`);
-
-module.exports = db;
+module.exports = {
+  getCourses: () => data.courses,
+  getLessons: () => data.lessons,
+  addCourse: (course) => {
+    const id = data.courses.length + 1;
+    const newCourse = { id, ...course };
+    data.courses.push(newCourse);
+    save();
+    return newCourse;
+  },
+  addLesson: (lesson) => {
+    const id = data.lessons.length + 1;
+    const newLesson = { id, ...lesson };
+    data.lessons.push(newLesson);
+    save();
+    return newLesson;
+  },
+  save,
+};

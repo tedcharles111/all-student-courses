@@ -1,171 +1,127 @@
 const db = require('./db');
 
-// Clear existing data (optional, for fresh seed)
-db.exec('DELETE FROM lessons');
-db.exec('DELETE FROM courses');
-db.exec("DELETE FROM sqlite_sequence WHERE name='courses'");
-db.exec("DELETE FROM sqlite_sequence WHERE name='lessons'");
+// Clear all data
+db.getCourses().length = 0;
+db.getLessons().length = 0;
 
-// ========= Helper to insert course + lessons =========
-function insertCourse({ title, subject, level, description, lessons }) {
-  const stmtCourse = db.prepare(`
-    INSERT INTO courses (title, subject, level, description, total_lessons) 
-    VALUES (?, ?, ?, ?, ?)
-  `);
-  const result = stmtCourse.run(title, subject, level, description, lessons.length);
-  const courseId = result.lastInsertRowid;
-
-  const stmtLesson = db.prepare(`
-    INSERT INTO lessons (course_id, order_index, title, content, resource_url, resource_type)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-
-  const insertLessons = db.transaction((lessons) => {
-    for (let i = 0; i < lessons.length; i++) {
-      const l = lessons[i];
-      stmtLesson.run(courseId, i + 1, l.title, l.content, l.resource_url || null, l.resource_type || null);
-    }
+function addCourse({ title, subject, level, description, lessons }) {
+  const course = db.addCourse({ title, subject, level, description, language: 'en', total_lessons: lessons.length });
+  lessons.forEach((l, i) => {
+    db.addLesson({
+      course_id: course.id,
+      order_index: i + 1,
+      title: l.title,
+      content: l.content,
+      resource_url: l.resource_url || null,
+      resource_type: l.resource_type || null
+    });
   });
-  insertLessons(lessons);
 }
 
-// ========= PRIMARY SCHOOL COURSES =========
-insertCourse({
-  title: 'Basic Mathematics (Primary 1)',
-  subject: 'Mathematics',
-  level: 'primary',
-  description: 'Introduction to numbers, addition, and subtraction for young learners.',
-  lessons: [
-    { title: 'Counting Numbers 1 to 10',
-      content: '<p>Learn to count from 1 to 10. This lesson includes fun examples with apples and balls.</p><p><strong>Exercise:</strong> Count the objects and write the number.</p>',
-      resource_url: '/files/primary-math-1-counting.pdf',
-      resource_type: 'pdf' },
-    { title: 'Addition with Pictures',
-      content: '<p>Understanding addition using pictures. You will see how combining two groups gives a total.</p>',
-      resource_url: null,
-      resource_type: null },
-    { title: 'Subtraction – Taking Away',
-      content: '<p>What happens when we take away items? This lesson teaches basic subtraction with real-life examples.</p>',
-      resource_url: '/files/primary-math-1-subtraction.mp4',
-      resource_type: 'video' }
-  ]
-});
+// Helper to create generic lessons
+function genericLessons(n) {
+  return Array.from({ length: n }, (_, i) => ({
+    title: `Lesson ${i+1}`,
+    content: `<p>Content for lesson ${i+1}.</p>`,
+    resource_url: null,
+    resource_type: null
+  }));
+}
 
-insertCourse({
-  title: 'English Phonics & Reading (Primary 2)',
-  subject: 'English',
-  level: 'primary',
-  description: 'Phonics sounds, blending, and reading simple sentences.',
-  lessons: [
-    { title: 'Alphabet Sounds',
-      content: '<p>Each letter has a special sound. Listen and repeat: A, B, C...</p>',
-      resource_url: '/files/phonics-alphabet.mp3',
-      resource_type: 'audio' },
-    { title: 'Blending Sounds into Words',
-      content: '<p>Blend sounds to read words like "cat", "dog", "sun". Practice with interactive exercises.</p>',
-      resource_url: null,
-      resource_type: null },
-    { title: 'Reading Short Stories',
-      content: '<p>Read and understand a short story about a day at the park.</p>',
-      resource_url: '/files/primary-english-story.pdf',
-      resource_type: 'pdf' }
-  ]
-});
+const courses = [
+  // ========== PRIMARY ==========
+  { title: 'A – Alphabet & Animals (Primary)', subject: 'English', level: 'primary', description: 'Letters A‑Z with animals.', lessons: genericLessons(5) },
+  { title: 'A – Adding Numbers (Primary Math)', subject: 'Mathematics', level: 'primary', description: 'Learn to add numbers up to 10.', lessons: genericLessons(4) },
+  { title: 'B – Basic Reading (Primary)', subject: 'English', level: 'primary', description: 'Phonics and blending.', lessons: genericLessons(6) },
+  { title: 'B – Big and Small (Primary Math)', subject: 'Mathematics', level: 'primary', description: 'Understanding sizes.', lessons: genericLessons(3) },
+  { title: 'C – Colors and Shapes (Primary)', subject: 'Art', level: 'primary', description: 'Identify and name colors and shapes.', lessons: genericLessons(5) },
+  { title: 'C – Counting to 20 (Primary Math)', subject: 'Mathematics', level: 'primary', description: 'Numbers 1‑20.', lessons: genericLessons(4) },
+  { title: 'D – Days of the Week', subject: 'English', level: 'primary', description: 'Learn Monday through Sunday.', lessons: genericLessons(3) },
+  { title: 'E – Everyday Science', subject: 'Science', level: 'primary', description: 'Plants, animals, weather.', lessons: genericLessons(5) },
+  { title: 'F – Fun with Phonics', subject: 'English', level: 'primary', description: 'Advanced blending and segmenting.', lessons: genericLessons(6) },
+  { title: 'G – Good Manners', subject: 'Social Studies', level: 'primary', description: 'Polite words and behavior.', lessons: genericLessons(2) },
+  { title: 'H – Healthy Habits', subject: 'Health', level: 'primary', description: 'Brushing teeth, washing hands.', lessons: genericLessons(3) },
+  { title: 'I – Introduction to Music', subject: 'Music', level: 'primary', description: 'Rhythm and singing.', lessons: genericLessons(4) },
+  { title: 'J – Jumping into Math', subject: 'Mathematics', level: 'primary', description: 'Starters for addition/subtraction.', lessons: genericLessons(5) },
+  { title: 'K – Knowing Your Body', subject: 'Science', level: 'primary', description: 'Parts of the body.', lessons: genericLessons(4) },
+  { title: 'L – Letters and Words', subject: 'English', level: 'primary', description: 'Forming simple words.', lessons: genericLessons(6) },
+  { title: 'M – My Family', subject: 'Social Studies', level: 'primary', description: 'Family members and roles.', lessons: genericLessons(3) },
+  { title: 'N – Numbers and Patterns', subject: 'Mathematics', level: 'primary', description: 'Recognizing patterns.', lessons: genericLessons(4) },
+  { title: 'O – Our World', subject: 'Geography', level: 'primary', description: 'Continents and oceans.', lessons: genericLessons(3) },
+  { title: 'P – Phonics Fun', subject: 'English', level: 'primary', description: 'More blending.', lessons: genericLessons(5) },
+  { title: 'Q – Question Words', subject: 'English', level: 'primary', description: 'Who, what, where, when, why.', lessons: genericLessons(3) },
+  { title: 'R – Rhymes and Songs', subject: 'Music', level: 'primary', description: 'Nursery rhymes.', lessons: genericLessons(4) },
+  { title: 'S – Seasons and Weather', subject: 'Science', level: 'primary', description: 'Four seasons.', lessons: genericLessons(4) },
+  { title: 'T – Time and Clocks', subject: 'Mathematics', level: 'primary', description: 'Reading clocks.', lessons: genericLessons(5) },
+  { title: 'U – Under the Sea', subject: 'Science', level: 'primary', description: 'Ocean animals.', lessons: genericLessons(3) },
+  { title: 'V – Vehicles', subject: 'General Knowledge', level: 'primary', description: 'Cars, planes, trains.', lessons: genericLessons(3) },
+  { title: 'W – Writing Practice', subject: 'English', level: 'primary', description: 'Letter formation.', lessons: genericLessons(6) },
+  { title: 'X – eXploring Nature', subject: 'Science', level: 'primary', description: 'Insects and plants.', lessons: genericLessons(4) },
+  { title: 'Y – Yummy Food', subject: 'Health', level: 'primary', description: 'Healthy eating.', lessons: genericLessons(3) },
+  { title: 'Z – Zoo Animals', subject: 'Science', level: 'primary', description: 'Learn about zoo animals.', lessons: genericLessons(4) },
 
-// ========= SECONDARY SCHOOL COURSES =========
-insertCourse({
-  title: 'Secondary Biology – Human Body Systems',
-  subject: 'Biology',
-  level: 'secondary',
-  description: 'Detailed study of the digestive, circulatory, and respiratory systems.',
-  lessons: [
-    { title: 'The Digestive System',
-      content: '<p>Organs involved and how food is broken down and absorbed. Includes diagrams and quizzes.</p>',
-      resource_url: '/files/digestive-system-diagram.png',
-      resource_type: 'image' },
-    { title: 'Circulatory System',
-      content: '<p>The heart, blood vessels, and how blood circulates oxygen and nutrients.</p>',
-      resource_url: '/files/circulatory-system.mp4',
-      resource_type: 'video' },
-    { title: 'Respiratory System',
-      content: '<p>Breathing mechanics and gas exchange in the lungs.</p>',
-      resource_url: null,
-      resource_type: null },
-    { title: 'Quiz – Body Systems',
-      content: '<p>Test your knowledge with this interactive quiz.</p>',
-      resource_url: '/files/body-systems-quiz.pdf',
-      resource_type: 'pdf' }
-  ]
-});
+  // ========== SECONDARY ==========
+  { title: 'A – Algebra I', subject: 'Mathematics', level: 'secondary', description: 'Linear equations.', lessons: genericLessons(5) },
+  { title: 'B – Biology: Cells', subject: 'Biology', level: 'secondary', description: 'Cell structure and function.', lessons: genericLessons(4) },
+  { title: 'C – Chemistry Basics', subject: 'Chemistry', level: 'secondary', description: 'Atoms and molecules.', lessons: genericLessons(5) },
+  { title: 'D – Data Handling', subject: 'Mathematics', level: 'secondary', description: 'Statistics and graphs.', lessons: genericLessons(4) },
+  { title: 'E – Earth Science', subject: 'Geography', level: 'secondary', description: 'Rocks, volcanoes, earthquakes.', lessons: genericLessons(5) },
+  { title: 'F – French for Beginners', subject: 'Languages', level: 'secondary', description: 'Greetings and basic phrases.', lessons: genericLessons(6) },
+  { title: 'G – Geometry', subject: 'Mathematics', level: 'secondary', description: 'Angles, triangles, circles.', lessons: genericLessons(5) },
+  { title: 'H – History: Ancient Civilizations', subject: 'History', level: 'secondary', description: 'Egypt, Greece, Rome.', lessons: genericLessons(4) },
+  { title: 'I – Information Technology', subject: 'Computer Science', level: 'secondary', description: 'Hardware and software.', lessons: genericLessons(4) },
+  { title: 'J – Justice and Government', subject: 'Social Studies', level: 'secondary', description: 'Civics and law.', lessons: genericLessons(3) },
+  { title: 'K – Kinematics', subject: 'Physics', level: 'secondary', description: 'Motion, velocity, acceleration.', lessons: genericLessons(5) },
+  { title: 'L – Literature: Poetry', subject: 'English', level: 'secondary', description: 'Analyzing poems.', lessons: genericLessons(4) },
+  { title: 'M – Music Theory', subject: 'Music', level: 'secondary', description: 'Notes, scales, chords.', lessons: genericLessons(5) },
+  { title: 'N – Newtonian Mechanics', subject: 'Physics', level: 'secondary', description: 'Laws of motion.', lessons: genericLessons(5) },
+  { title: 'O – Organic Chemistry Intro', subject: 'Chemistry', level: 'secondary', description: 'Hydrocarbons.', lessons: genericLessons(4) },
+  { title: 'P – Probability', subject: 'Mathematics', level: 'secondary', description: 'Chance and odds.', lessons: genericLessons(4) },
+  { title: 'Q – Quantum Physics (Intro)', subject: 'Physics', level: 'secondary', description: 'Wave‑particle duality.', lessons: genericLessons(3) },
+  { title: 'R – Reproduction in Plants', subject: 'Biology', level: 'secondary', description: 'Flowers and pollination.', lessons: genericLessons(4) },
+  { title: 'S – Spanish for Beginners', subject: 'Languages', level: 'secondary', description: 'Hola, ¿cómo estás?', lessons: genericLessons(5) },
+  { title: 'T – Trigonometry', subject: 'Mathematics', level: 'secondary', description: 'Sine, cosine, tangent.', lessons: genericLessons(5) },
+  { title: 'U – US History', subject: 'History', level: 'secondary', description: 'Revolution to Civil War.', lessons: genericLessons(4) },
+  { title: 'V – Volcanoes and Earthquakes', subject: 'Geography', level: 'secondary', description: 'Plate tectonics.', lessons: genericLessons(4) },
+  { title: 'W – World Religions', subject: 'Religious Studies', level: 'secondary', description: 'Major world religions.', lessons: genericLessons(3) },
+  { title: 'X – eXploring Space', subject: 'Astronomy', level: 'secondary', description: 'Planets and stars.', lessons: genericLessons(4) },
+  { title: 'Y – Youth and Society', subject: 'Social Studies', level: 'secondary', description: 'Peer pressure and media.', lessons: genericLessons(3) },
+  { title: 'Z – Zoology Basics', subject: 'Biology', level: 'secondary', description: 'Animal classification.', lessons: genericLessons(4) },
 
-insertCourse({
-  title: 'Physics – Introduction to Mechanics',
-  subject: 'Physics',
-  level: 'secondary',
-  description: 'Newton’s laws, motion, forces, and energy.',
-  lessons: [
-    { title: 'Newton’s First Law of Motion',
-      content: '<p>An object at rest stays at rest unless acted upon. Examples and applications.</p>',
-      resource_url: null,
-      resource_type: null },
-    { title: 'Newton’s Second Law – F = ma',
-      content: '<p>Force equals mass times acceleration. Solve practice problems.</p>',
-      resource_url: '/files/mechanics-problems.pdf',
-      resource_type: 'pdf' },
-    { title: 'Energy and Work',
-      content: '<p>Kinetic and potential energy, conservation of energy.</p>',
-      resource_url: '/files/energy-simulation.html',
-      resource_type: 'html' }
-  ]
-});
+  // ========== TERTIARY (University) ==========
+  { title: 'A – Advanced Algorithms', subject: 'Computer Science', level: 'tertiary', description: 'Sorting, searching, dynamic programming.', lessons: genericLessons(5) },
+  { title: 'A – Artificial Intelligence', subject: 'Computer Science', level: 'tertiary', description: 'Machine learning basics.', lessons: genericLessons(6) },
+  { title: 'B – Biochemistry', subject: 'Biology', level: 'tertiary', description: 'Proteins, enzymes, metabolism.', lessons: genericLessons(5) },
+  { title: 'C – Calculus I', subject: 'Mathematics', level: 'tertiary', description: 'Limits, derivatives, integrals.', lessons: genericLessons(6) },
+  { title: 'C – Corporate Finance', subject: 'Business', level: 'tertiary', description: 'Capital budgeting, valuation.', lessons: genericLessons(4) },
+  { title: 'D – Data Structures', subject: 'Computer Science', level: 'tertiary', description: 'Stacks, queues, trees, graphs.', lessons: genericLessons(5) },
+  { title: 'E – Engineering Mechanics', subject: 'Engineering', level: 'tertiary', description: 'Statics and dynamics.', lessons: genericLessons(5) },
+  { title: 'E – Electromagnetism', subject: 'Physics', level: 'tertiary', description: 'Maxwell’s equations.', lessons: genericLessons(5) },
+  { title: 'F – Fluid Mechanics', subject: 'Engineering', level: 'tertiary', description: 'Bernoulli, Reynolds.', lessons: genericLessons(4) },
+  { title: 'G – Game Theory', subject: 'Economics', level: 'tertiary', description: 'Nash equilibrium, auctions.', lessons: genericLessons(4) },
+  { title: 'H – Human Anatomy', subject: 'Medicine', level: 'tertiary', description: 'Organs and systems.', lessons: genericLessons(5) },
+  { title: 'I – International Law', subject: 'Law', level: 'tertiary', description: 'Treaties, UN, human rights.', lessons: genericLessons(4) },
+  { title: 'J – Java Programming', subject: 'Computer Science', level: 'tertiary', description: 'OOP, Swing, JDBC.', lessons: genericLessons(5) },
+  { title: 'K – Kinematics of Machinery', subject: 'Engineering', level: 'tertiary', description: 'Gears, linkages.', lessons: genericLessons(4) },
+  { title: 'L – Linear Algebra', subject: 'Mathematics', level: 'tertiary', description: 'Matrices, vectors, eigenvalues.', lessons: genericLessons(5) },
+  { title: 'M – Macroeconomics', subject: 'Economics', level: 'tertiary', description: 'GDP, inflation, fiscal policy.', lessons: genericLessons(5) },
+  { title: 'M – Microeconomics', subject: 'Economics', level: 'tertiary', description: 'Supply, demand, elasticity.', lessons: genericLessons(5) },
+  { title: 'N – Network Security', subject: 'Computer Science', level: 'tertiary', description: 'Firewalls, encryption, protocols.', lessons: genericLessons(4) },
+  { title: 'O – Operating Systems', subject: 'Computer Science', level: 'tertiary', description: 'Processes, memory, file systems.', lessons: genericLessons(5) },
+  { title: 'P – Philosophy of Science', subject: 'Philosophy', level: 'tertiary', description: 'Falsifiability, paradigms.', lessons: genericLessons(3) },
+  { title: 'P – Probability Theory', subject: 'Mathematics', level: 'tertiary', description: 'Random variables, distributions.', lessons: genericLessons(5) },
+  { title: 'Q – Quantum Computing', subject: 'Computer Science', level: 'tertiary', description: 'Qubits and superposition.', lessons: genericLessons(4) },
+  { title: 'R – Robotics', subject: 'Engineering', level: 'tertiary', description: 'Kinematics, control, sensors.', lessons: genericLessons(4) },
+  { title: 'S – Software Engineering', subject: 'Computer Science', level: 'tertiary', description: 'SDLC, testing, design patterns.', lessons: genericLessons(5) },
+  { title: 'T – Thermodynamics', subject: 'Physics', level: 'tertiary', description: 'Laws of thermodynamics.', lessons: genericLessons(5) },
+  { title: 'U – Unix/Linux Systems', subject: 'Computer Science', level: 'tertiary', description: 'Shell scripting, processes.', lessons: genericLessons(4) },
+  { title: 'V – Vector Calculus', subject: 'Mathematics', level: 'tertiary', description: 'Gradient, divergence, curl.', lessons: genericLessons(5) },
+  { title: 'W – Web Development', subject: 'Computer Science', level: 'tertiary', description: 'HTML, CSS, JavaScript, React.', lessons: genericLessons(6) },
+  { title: 'X – XML and Web Services', subject: 'Computer Science', level: 'tertiary', description: 'SOAP, REST.', lessons: genericLessons(3) },
+  { title: 'Y – Yoga and Wellness', subject: 'Health Sciences', level: 'tertiary', description: 'Mind‑body connection.', lessons: genericLessons(3) },
+  { title: 'Z – Zoology: Vertebrate Biology', subject: 'Biology', level: 'tertiary', description: 'Fish, amphibians, reptiles.', lessons: genericLessons(4) },
+];
 
-// ========= TERTIARY / UNIVERSITY COURSES =========
-insertCourse({
-  title: 'Introduction to Computer Science (CS101)',
-  subject: 'Computer Science',
-  level: 'tertiary',
-  description: 'Algorithms, data structures, and Python programming.',
-  lessons: [
-    { title: 'What is an Algorithm?',
-      content: '<p>Algorithms are step-by-step procedures. We look at sorting and searching examples.</p>',
-      resource_url: null,
-      resource_type: null },
-    { title: 'Variables and Data Types in Python',
-      content: '<p>Learn about integers, floats, strings, and lists. Code examples included.</p>',
-      resource_url: '/files/python-syntax-cheatsheet.pdf',
-      resource_type: 'pdf' },
-    { title: 'Loops and Functions',
-      content: '<p>for and while loops, defining functions. Practice exercises.</p>',
-      resource_url: '/files/cs101-loops-lab.zip',
-      resource_type: 'zip' },
-    { title: 'Introduction to Big O Notation',
-      content: '<p>Understanding time complexity with real-world examples.</p>',
-      resource_url: '/files/big-o-explanation.mp4',
-      resource_type: 'video' }
-  ]
-});
+courses.forEach(c => addCourse(c));
 
-insertCourse({
-  title: 'Principles of Economics (ECON 101)',
-  subject: 'Economics',
-  level: 'tertiary',
-  description: 'Supply and demand, market structures, and macroeconomic indicators.',
-  lessons: [
-    { title: 'Supply and Demand',
-      content: '<p>The core model of economics. Shifts vs movements along the curves.</p>',
-      resource_url: '/files/supply-demand-graph.png',
-      resource_type: 'image' },
-    { title: 'Market Equilibrium',
-      content: '<p>How prices are determined in competitive markets.</p>',
-      resource_url: null,
-      resource_type: null },
-    { title: 'Gross Domestic Product (GDP)',
-      content: '<p>Measuring a country’s economic output.</p>',
-      resource_url: '/files/gdp-data-2023.xlsx',
-      resource_type: 'file' }
-  ]
-});
-
-// Add more courses as needed (you can easily extend)
-
-console.log('Database seeded successfully!');
+console.log('Database seeded with ' + courses.length + ' courses!');

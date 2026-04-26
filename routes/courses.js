@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 const model = require('../models/course');
 
-// GET /api/courses – list with pagination, search, filters
 router.get('/', (req, res) => {
   try {
-    const { page, limit, search, subject, level, sort } = req.query;
+    const { page, limit, search, starts_with, subject, level, sort } = req.query;
     const result = model.listCourses({
       page: parseInt(page) || 1,
       limit: parseInt(limit) || 20,
       search: search || '',
+      starts_with: starts_with || null,
       subject: subject || null,
       level: level || null,
       sort: sort || 'title'
@@ -20,7 +20,6 @@ router.get('/', (req, res) => {
   }
 });
 
-// GET /api/courses/:id – full course with all lessons
 router.get('/:id', (req, res) => {
   try {
     const course = model.getCourseById(req.params.id);
@@ -31,7 +30,6 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// GET /api/courses/:courseId/lessons/:lessonId – single lesson
 router.get('/:courseId/lessons/:lessonId', (req, res) => {
   try {
     const lesson = model.getLessonById(req.params.courseId, req.params.lessonId);
