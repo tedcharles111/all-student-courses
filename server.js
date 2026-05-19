@@ -20,3 +20,9 @@ app.use((req, res) => res.status(404).json({ error: 'Endpoint not found' }));
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
+// Auto‑seed if database is empty
+const db = require('./db');
+if (db.getCourses().length === 0) {
+  console.log('Empty DB detected, running seed...');
+  require('./seed');
+}
