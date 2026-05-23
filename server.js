@@ -26,3 +26,10 @@ if (db.getCourses().length === 0) {
   console.log('Empty DB detected, running seed...');
   require('./seed');
 }
+
+// Auto‑seed if database empty
+const db = require('./db');
+if (db.getCourses().length === 0) {
+  console.log('Empty DB, running seed...');
+  require('./seed');
+}
