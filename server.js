@@ -27,6 +27,7 @@ app.get('/api/seed', (req, res) => {
   try { fs.unlinkSync(dataFile); } catch(e) { /* file may not exist */ }
 
   // Run the seed (creates data.json with long lessons)
+  delete require.cache[require.resolve('./seed')];
   require('./seed');
 
   res.json({ status: 'seeded', courses: db.getCourses().length });
@@ -39,6 +40,7 @@ app.use((req, res) => res.status(404).json({ error: 'Endpoint not found' }));
 const db = require('./db');
 if (db.getCourses().length === 0) {
   console.log('Empty DB, running seed...');
+  delete require.cache[require.resolve('./seed')];
   require('./seed');
 }
 
