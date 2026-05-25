@@ -69,7 +69,7 @@ function generateMegaContent(courseTitle, subject, chapterNum) {
   const topic = topicTemplates[chapterNum-1] || `Chapter ${chapterNum}`;
   let html = `<h2>${topic}</h2>`;
   // 200 paragraphs – approx. 14,000‑20,000 words per lesson
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 150; i++) {
     const p = random(hugeParagraphPool).replace(/\{topic\}/g, topic).replace(/\{subject\}/g, subject);
     html += `<p>${p}</p>`;
   }
