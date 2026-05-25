@@ -3,13 +3,13 @@ db.getCourses().length = 0;
 db.getLessons().length = 0;
 
 function addCourse({ title, subject, level, description }) {
-  const course = db.addCourse({ title, subject, level, description, language:'en', total_lessons: 13 });
+  const c = db.addCourse({ title, subject, level, description, language:'en', total_lessons: 13 });
   for (let i = 1; i <= 13; i++) {
     db.addLesson({
-      course_id: course.id,
+      course_id: c.id,
       order_index: i,
       title: `Chapter ${i}: ${topicTemplates[i-1] || 'Advanced Topics'}`,
-      content: generateMegaContent(title, subject, i)
+      content: generateContent(title, subject, i)
     });
   }
 }
@@ -50,35 +50,23 @@ const hugeParagraphPool = [
   "Sustainability has emerged as a central theme in {topic} discussions. Environmental, social, and governance (ESG) criteria are increasingly influencing investment decisions and consumer behaviour. Organisations that proactively integrate sustainability into their core strategy are better positioned for long‑term resilience.",
   "Innovation in {topic} often arises from unexpected sources. Cross‑industry learning, serendipitous discoveries, and grassroots initiatives can lead to breakthroughs that formal R&D programs miss. This chapter encourages a culture of curiosity and openness to external ideas.",
   "The interplay between {topic} and public policy is a recurring theme throughout this course. Governments shape the rules of the game through regulation, taxation, and incentives. Understanding the policy landscape is essential for strategic planning and risk management.",
-  "Reflection and continuous improvement are the hallmarks of a mature {topic} practitioner. After each major initiative, conducting a thorough post‑mortem allows you to capture lessons learned and apply them to future projects. This chapter closes with a framework for systematic reflection.",
-  "A comprehensive understanding of {topic} requires examining both micro and macro perspectives. At the micro level, individual behaviours and organisational processes play a crucial role; at the macro level, industry trends and economic forces set the stage. Integrating these viewpoints yields a richer, more nuanced analysis.",
-  "Ethical dilemmas frequently arise in the practice of {topic}. Balancing competing interests—profit versus social good, short‑term gains versus long‑term sustainability—demands a principled decision‑making framework. This chapter presents several ethical models and applies them to realistic scenarios.",
-  "Cultural intelligence is increasingly recognised as a vital competency in {topic}. Professionals must navigate diverse cultural norms, communication styles, and business practices. Developing cultural empathy and adaptability is essential for international success.",
-  "The role of leadership in {topic} cannot be understated. Visionary leaders inspire their teams, align resources, and drive strategic initiatives forward. This chapter examines different leadership styles and their effectiveness in various organisational contexts.",
-  "Strategic alignment is a key theme running through {topic}. Every decision, from resource allocation to performance measurement, should be tied to overarching goals. Misalignment leads to wasted effort and missed opportunities.",
-  "Risk management is an integral part of {topic}. Identifying, assessing, and mitigating risks protects the organisation from potential threats while allowing it to seize opportunities. A structured risk management process is explored in detail.",
-  "Learning organisations continuously adapt and improve by systematically capturing knowledge from their experiences. Applying this concept to {topic} creates a virtuous cycle of reflection, learning, and enhancement.",
-  "Digital transformation is fundamentally altering the landscape of {topic}. Cloud computing, artificial intelligence, and automation are not just buzzwords but real drivers of change. This chapter explores how to harness these technologies effectively.",
-  "Building resilience in {topic} involves developing the capacity to absorb shocks and recover quickly. Whether facing economic downturns, natural disasters, or competitive threats, resilient organisations adapt and thrive.",
-  "Finally, personal mastery in {topic} comes from a commitment to lifelong learning. The most successful professionals are those who continuously update their skills, seek feedback, and remain curious about the world around them."
+  "Reflection and continuous improvement are the hallmarks of a mature {topic} practitioner. After each major initiative, conducting a thorough post‑mortem allows you to capture lessons learned and apply them to future projects. This chapter closes with a framework for systematic reflection."
 ];
 
 function random(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-function generateMegaContent(courseTitle, subject, chapterNum) {
+function generateContent(courseTitle, subject, chapterNum) {
   const topic = topicTemplates[chapterNum-1] || `Chapter ${chapterNum}`;
   let html = `<h2>${topic}</h2>`;
-  // 200 paragraphs – approx. 14,000‑20,000 words per lesson
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < 120; i++) {
     const p = random(hugeParagraphPool).replace(/\{topic\}/g, topic).replace(/\{subject\}/g, subject);
     html += `<p>${p}</p>`;
   }
   html += '<h3>Chapter Summary</h3><ul><li>Main insight one</li><li>Main insight two</li><li>Main insight three</li></ul>';
-  html += '<p><em>End of Chapter. Please complete the self‑assessment quiz before proceeding.</em></p>';
+  html += '<p><em>End of Chapter.</em></p>';
   return html;
 }
 
-// All 139 courses (same list)
 const allCourses = [
   {title:'A – Advanced Algorithms', sub:'Computer Science', lev:'tertiary'},
   {title:'A – Artificial Intelligence', sub:'Computer Science', lev:'tertiary'},
@@ -223,4 +211,4 @@ const allCourses = [
 
 allCourses.forEach(c => addCourse({title:c.title, subject:c.sub, level:c.lev, description:'Comprehensive course on ' + c.title}));
 
-console.log('✅ All 139 courses seeded with ULTRA long‑form lessons (200 paragraphs each)! Each lesson is approx. 14,000‑20,000 words.');
+console.log('✅ All 139 courses seeded with 120‑paragraph lessons!');
