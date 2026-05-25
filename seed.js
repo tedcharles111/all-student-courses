@@ -202,4 +202,4 @@ const allCourses = [
 
 allCourses.forEach(c => addCourse({title:c.title, subject:c.sub, level:c.lev, description:'Comprehensive course on ' + c.title}));
 
-console.log('✅ All 139 courses seeded with 80‑paragraph lessons!');
+console.log('✅ All 139 courses seeded with 50‑paragraph lessons!');
