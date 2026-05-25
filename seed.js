@@ -48,7 +48,7 @@ function random(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function generateContent(courseTitle, subject, chapterNum) {
   const topic = topicTemplates[chapterNum-1] || `Chapter ${chapterNum}`;
   let html = `<h2>${topic}</h2>`;
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 200; i++) {
     const p = random(hugeParagraphPool).replace(/\{topic\}/g, topic).replace(/\{subject\}/g, subject);
     html += `<p>${p}</p>`;
   }
