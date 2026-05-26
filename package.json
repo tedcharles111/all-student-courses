@@ -4,7 +4,7 @@
   "description": "Self-contained course repository API",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "rm -f data.json && node server.js",
     "seed": "node seed.js"
   },
   "dependencies": {
