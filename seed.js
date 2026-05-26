@@ -2,15 +2,11 @@ const fs = require('fs');
 const path = require('path');
 const db = require('./db');
 
-// Clear existing data
-db.getCourses().length = 0;
-db.getLessons().length = 0;
-db.save();
+// Clear old data
+const COURSES_DIR = path.join(__dirname, 'courses');
+if (fs.existsSync(COURSES_DIR)) fs.rmSync(COURSES_DIR, { recursive: true, force: true });
+fs.mkdirSync(COURSES_DIR, { recursive: true });
 
-const TMP_DIR = path.join(__dirname, 'tmp_courses');
-if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);
-
-// Topic templates
 const topicTemplates = [
   'Introduction and Historical Background',
   'Fundamental Theories and Principles',
@@ -54,17 +50,17 @@ function random(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 function generateContent(courseTitle, subject, chapterNum) {
   const topic = topicTemplates[chapterNum-1] || `Chapter ${chapterNum}`;
-  let html = `<h2>${topic}</h2>`;
+  let html = '<h2>' + topic + '</h2>';
   for (let i = 0; i < 200; i++) {
     const p = random(hugeParagraphPool).replace(/\{topic\}/g, topic).replace(/\{subject\}/g, subject);
-    html += `<p>${p}</p>`;
+    html += '<p>' + p + '</p>';
   }
   html += '<h3>Chapter Summary</h3><ul><li>Main insight one</li><li>Main insight two</li><li>Main insight three</li></ul>';
   html += '<p><em>End of Chapter.</em></p>';
   return html;
 }
 
-// All 139 courses (same list)
+// All 139 courses
 const allCourses = [
   {title:'A – Advanced Algorithms', sub:'Computer Science', lev:'tertiary'},
   {title:'A – Artificial Intelligence', sub:'Computer Science', lev:'tertiary'},
@@ -207,54 +203,26 @@ const allCourses = [
   {title:'Z – Zoology Basics', sub:'Biology', lev:'secondary'}
 ];
 
-// Generate each course individually and save to temp file
-let courseId = 1;
-let lessonId = 1;
-let courseCount = 0;
-
+// Generate each course
 allCourses.forEach((c, index) => {
   const lessons = [];
   for (let i = 1; i <= 13; i++) {
     lessons.push({
-      id: lessonId++,
-      course_id: courseId,
+      id: index * 100 + i,  // unique lesson id
       order_index: i,
-      title: `Chapter ${i}: ${topicTemplates[i-1] || 'Advanced Topics'}`,
+      title: 'Chapter ' + i + ': ' + (topicTemplates[i-1] || 'Advanced Topics'),
       content: generateContent(c.title, c.sub, i)
     });
   }
-  const courseObj = {
-    id: courseId++,
+  db.addCourse({
     title: c.title,
     subject: c.sub,
     level: c.lev,
     description: 'Comprehensive course on ' + c.title,
-    language: 'en',
     total_lessons: 13,
     lessons: lessons
-  };
-  fs.writeFileSync(path.join(TMP_DIR, `course_${index}.json`), JSON.stringify(courseObj));
-  console.log(`Generated course ${index+1}/${allCourses.length}: ${c.title}`);
+  });
+  console.log('Seeded course ' + (index+1) + '/' + allCourses.length + ': ' + c.title);
 });
 
-console.log('Assembling final data.json...');
-
-// Assemble final data.json from temp files
-const finalCourses = [];
-const finalLessons = [];
-const files = fs.readdirSync(TMP_DIR).filter(f => f.startsWith('course_'));
-files.forEach(f => {
-  const raw = fs.readFileSync(path.join(TMP_DIR, f), 'utf-8');
-  const obj = JSON.parse(raw);
-  const { lessons, ...course } = obj;
-  finalCourses.push(course);
-  lessons.forEach(l => finalLessons.push(l));
-});
-
-const finalData = { courses: finalCourses, lessons: finalLessons };
-fs.writeFileSync(path.join(__dirname, 'data.json'), JSON.stringify(finalData));
-
-// Clean up temp directory
-fs.rmSync(TMP_DIR, { recursive: true, force: true });
-
-console.log(`✅ All 139 courses seeded with 200‑paragraph lessons! Final data.json size: ${(fs.statSync(path.join(__dirname, 'data.json')).size / 1024 / 1024} MB`);
+console.log('✅ All 139 courses seeded with 200‑paragraph lessons!');
