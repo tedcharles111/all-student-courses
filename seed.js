@@ -1,19 +1,16 @@
+const fs = require('fs');
+const path = require('path');
 const db = require('./db');
+
+// Clear existing data
 db.getCourses().length = 0;
 db.getLessons().length = 0;
+db.save();
 
-function addCourse({ title, subject, level, description }) {
-  const c = db.addCourse({ title, subject, level, description, language:'en', total_lessons: 13 });
-  for (let i = 1; i <= 13; i++) {
-    db.addLesson({
-      course_id: c.id,
-      order_index: i,
-      title: `Chapter ${i}: ${topicTemplates[i-1] || 'Advanced Topics'}`,
-      content: generateContent(title, subject, i)
-    });
-  }
-}
+const TMP_DIR = path.join(__dirname, 'tmp_courses');
+if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);
 
+// Topic templates
 const topicTemplates = [
   'Introduction and Historical Background',
   'Fundamental Theories and Principles',
@@ -40,7 +37,17 @@ const hugeParagraphPool = [
   "The regulatory landscape surrounding {topic} is complex and varies by jurisdiction. In the European Union, the General Data Protection Regulation (GDPR) has had a profound impact on how {subject} data is collected and processed. Similarly, the United States has a patchwork of federal and state laws that often create confusion. Staying compliant requires continuous monitoring and a proactive compliance strategy.",
   "Technological disruption is reshaping {topic} at an unprecedented pace. Artificial intelligence, blockchain, and the Internet of Things are no longer futuristic concepts; they are practical tools that can streamline operations and create new value streams. However, adoption requires significant investment and a willingness to experiment. This chapter provides a roadmap for technology integration.",
   "Effective communication is a cornerstone of successful {topic} management. Stakeholders need to be kept informed at every stage, from initial planning through to final evaluation. Transparency builds trust and reduces resistance to change. We will examine proven communication frameworks and provide templates that you can adapt for your own projects.",
-  "Looking ahead, the future of {topic} will be shaped by global megatrends such as climate change, demographic shifts, and economic uncertainty. Professionals who can anticipate these changes and pivot quickly will be in high demand. This final section of the chapter invites you to reflect on your own career path and consider how you can contribute to the evolution of {subject}."
+  "Looking ahead, the future of {topic} will be shaped by global megatrends such as climate change, demographic shifts, and economic uncertainty. Professionals who can anticipate these changes and pivot quickly will be in high demand. This final section of the chapter invites you to reflect on your own career path and consider how you can contribute to the evolution of {subject}.",
+  "An additional layer of analysis reveals that {topic} intersects with ethics, law, and social responsibility. Organisations must navigate a complex web of stakeholder expectations, ensuring that their strategies are both profitable and principled. The long‑term viability of any initiative depends on building trust and maintaining a social licence to operate.",
+  "The global dimension of {topic} cannot be overstated. Supply chains, labour markets, and regulatory environments differ dramatically across regions. A strategy that works in one cultural context may fail in another unless adapted thoughtfully. This chapter provides frameworks for cross‑cultural analysis and strategic adaptation.",
+  "Financial considerations are central to {topic} planning. Budgeting, return on investment, and cost‑benefit analysis must be rigorously applied. However, financial metrics alone are insufficient; qualitative factors such as reputation, employee morale, and customer loyalty also play critical roles in determining success.",
+  "Team dynamics heavily influence the implementation of {topic}. High‑performing teams are characterised by psychological safety, clear goals, and diverse skill sets. Leaders must foster an environment where experimentation is encouraged and failures are treated as learning opportunities rather than punishments.",
+  "The human element of {topic} is often the most complex. Resistance to change, cognitive biases, and communication breakdowns can derail even the best‑laid plans. This chapter explores change management strategies that address the emotional and psychological aspects of organisational transformation.",
+  "Data‑driven decision making is transforming the way {topic} is approached. With the proliferation of analytics tools, organisations can now measure performance in real time and adjust tactics accordingly. However, data must be interpreted with caution; correlation does not imply causation, and over‑reliance on quantitative metrics can obscure important qualitative insights.",
+  "Sustainability has emerged as a central theme in {topic} discussions. Environmental, social, and governance (ESG) criteria are increasingly influencing investment decisions and consumer behaviour. Organisations that proactively integrate sustainability into their core strategy are better positioned for long‑term resilience.",
+  "Innovation in {topic} often arises from unexpected sources. Cross‑industry learning, serendipitous discoveries, and grassroots initiatives can lead to breakthroughs that formal R&D programs miss. This chapter encourages a culture of curiosity and openness to external ideas.",
+  "The interplay between {topic} and public policy is a recurring theme throughout this course. Governments shape the rules of the game through regulation, taxation, and incentives. Understanding the policy landscape is essential for strategic planning and risk management.",
+  "Reflection and continuous improvement are the hallmarks of a mature {topic} practitioner. After each major initiative, conducting a thorough post‑mortem allows you to capture lessons learned and apply them to future projects. This chapter closes with a framework for systematic reflection."
 ];
 
 function random(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -48,7 +55,7 @@ function random(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function generateContent(courseTitle, subject, chapterNum) {
   const topic = topicTemplates[chapterNum-1] || `Chapter ${chapterNum}`;
   let html = `<h2>${topic}</h2>`;
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 200; i++) {
     const p = random(hugeParagraphPool).replace(/\{topic\}/g, topic).replace(/\{subject\}/g, subject);
     html += `<p>${p}</p>`;
   }
@@ -200,6 +207,54 @@ const allCourses = [
   {title:'Z – Zoology Basics', sub:'Biology', lev:'secondary'}
 ];
 
-allCourses.forEach(c => addCourse({title:c.title, subject:c.sub, level:c.lev, description:'Comprehensive course on ' + c.title}));
+// Generate each course individually and save to temp file
+let courseId = 1;
+let lessonId = 1;
+let courseCount = 0;
 
-console.log('✅ All 139 courses seeded with 50‑paragraph lessons!');
+allCourses.forEach((c, index) => {
+  const lessons = [];
+  for (let i = 1; i <= 13; i++) {
+    lessons.push({
+      id: lessonId++,
+      course_id: courseId,
+      order_index: i,
+      title: `Chapter ${i}: ${topicTemplates[i-1] || 'Advanced Topics'}`,
+      content: generateContent(c.title, c.sub, i)
+    });
+  }
+  const courseObj = {
+    id: courseId++,
+    title: c.title,
+    subject: c.sub,
+    level: c.lev,
+    description: 'Comprehensive course on ' + c.title,
+    language: 'en',
+    total_lessons: 13,
+    lessons: lessons
+  };
+  fs.writeFileSync(path.join(TMP_DIR, `course_${index}.json`), JSON.stringify(courseObj));
+  console.log(`Generated course ${index+1}/${allCourses.length}: ${c.title}`);
+});
+
+console.log('Assembling final data.json...');
+
+// Assemble final data.json from temp files
+const finalCourses = [];
+const finalLessons = [];
+const files = fs.readdirSync(TMP_DIR).filter(f => f.startsWith('course_'));
+files.forEach(f => {
+  const raw = fs.readFileSync(path.join(TMP_DIR, f), 'utf-8');
+  const obj = JSON.parse(raw);
+  const { lessons, ...course } = obj;
+  finalCourses.push(course);
+  lessons.forEach(l => finalLessons.push(l));
+});
+
+const finalData = { courses: finalCourses, lessons: finalLessons };
+fs.writeFileSync(path.join(__dirname, 'data.json'), JSON.stringify(finalData));
+
+// Clean up temp directory
+fs.rmSync(TMP_DIR, { recursive: true, force: true });
+
+console.log(`✅ All 139 courses seeded with 200‑paragraph lessons! Final data.json size: ${(fs.statSync(path.join(__dirname, 'data.json')).size / 1024 / 1024} MB`);
